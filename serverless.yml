@@ -1,0 +1,47 @@
+# Welcome to serverless. Read the docs
+# https://serverless.com/framework/docs/
+# Serverless.yml is the configuration the CLI
+# uses to deploy your code to your provider of choice
+# The `service` block is the name of the service
+service: file-UploaderService-foqc-home
+# The `provider` block defines where your service will be deployed
+custom:
+  bucket: lambda-test-foqc-file-home
+  apigwBinary:
+    types:
+      - 'image/jpeg'
+      - 'image/png'
+
+plugins:
+ - serverless-apigw-binary
+ 
+# The `provider` block defines where your service will be deployed
+provider:
+  name: aws
+  runtime: nodejs12.x
+  region: us-east-1
+  stackName: fileUploaderHome
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "s3:PutObject"
+      Resource:
+        - "arn:aws:s3:::${self:custom.bucket}/*"
+# The `functions` block defines what code to deploy
+functions:
+  UploadFileHome:
+    handler: fileUploaderHome.handler
+    # The `events` block defines how to trigger the handler.helloWorld code
+    events:
+      - http:
+          path: upload
+          method: post
+          cors: true
+    environment:
+      Bucket: ${self:custom.bucket} 
+resources:
+  Resources:
+    StorageBucket:
+      Type: "AWS::S3::Bucket"
+      Properties:
+        BucketName: ${self:custom.bucket}
