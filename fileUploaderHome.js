@@ -1,6 +1,7 @@
 "use strict";
 const AWS = require("aws-sdk");
 const uuid = require("uuid/v4");
+const jimp = require("jimp");
 const s3 = new AWS.S3();
 const formParser = require("./formParser");
 
@@ -13,61 +14,104 @@ const JPG_MIME_TYPE = "image/jpg";
 
 const MIME_TYPES = [PNG_MIME_TYPE, JPEG_MIME_TYPE, JPG_MIME_TYPE];
 
-const isAllowedSize = size => size <= MAX_SIZE;
-const isAllowedMimeType = mimeType => MIME_TYPES.find(type => type === mimeType);
-const isAllowedFile = (size, mimeType) =>
-  isAllowedSize(size) && isAllowedMimeType(mimeType);
-
 module.exports.handler = async event => {
   try {
     const formData = await formParser.parser(event);
     const file = formData.files[0];
-    if (!isAllowedFile(file.content.byteLength, file.contentType))
-      return {
-        statusCode: 500,
-        body: JSON.stringify({
-          message: "File size or type not allowed"
-        })
-      };
-    const key = `${uuid()}_${file.filename}`;
 
-    const response = await new Promise((resolve, reject) => {
-      s3.upload(
-        {
-          Bucket: bucket,
-          Key: key,
-          Body: file.content,
-          ContentType: file.contentType
-        },
-        function(err, data) {
-          if (err) reject();
-          resolve(data);
-        }
-      );
+    if (!isAllowedFile(file.content.byteLength, file.contentType))
+      getErrorMessage("File size or type not allowed");
+
+    const uid = uuid();
+
+    const originalKey = `${uid}_original_${file.filename}`;
+    const thumbnailKey = `${uid}_thumbnail_${file.filename}`;
+
+    const fileResizedBuffer = await resize(
+      file.content,
+      file.contentType,
+      460,
+      460
+    );
+
+    const originalFile = await uploadToS3(
+      bucket,
+      originalKey,
+      file.content,
+      file.contentType
+    );
+
+    const thumbnailFile = await uploadToS3(
+      bucket,
+      thumbnailKey,
+      fileResizedBuffer,
+      file.contentType
+    );
+
+    const signedOriginalUrl = s3.getSignedUrl("getObject", {
+      Bucket: originalFile.Bucket,
+      Key: originalKey
     });
 
-    const signedUrl = s3.getSignedUrl("getObject", {
-      Bucket: response.Bucket,
-      Key: key
+    const signedThumbnailUrl = s3.getSignedUrl("getObject", {
+      Bucket: thumbnailFile.Bucket,
+      Key: thumbnailKey
     });
 
     return {
       statusCode: 200,
       body: JSON.stringify({
         mimeType: file.contentType,
-        originalKey: response.key,
-        bucket: response.Bucket,
+        originalKey: originalFile.key,
+        thumbnailKey: thumbnailFile.key,
+        bucket: originalFile.Bucket,
         fileName: file.filename,
-        originalPath: signedUrl,
+        originalPath: signedOriginalUrl,
+        thumbnailPath: signedThumbnailUrl,
         originalSize: file.content.byteLength
       })
     };
   } catch (e) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({
-        message: e.message
-      })
-    };
+    return getErrorMessage(e.message);
   }
 };
+
+const getErrorMessage = message => ({
+  statusCode: 500,
+  body: JSON.stringify({
+    message
+  })
+});
+
+const isAllowedSize = size => size <= MAX_SIZE;
+
+const isAllowedMimeType = mimeType =>
+  MIME_TYPES.find(type => type === mimeType);
+
+const isAllowedFile = (size, mimeType) =>
+  isAllowedSize(size) && isAllowedMimeType(mimeType);
+
+const uploadToS3 = (bucket, key, buffer, mimeType) =>
+  new Promise((resolve, reject) => {
+    s3.upload(
+      {
+        Bucket: bucket,
+        Key: key,
+        Body: buffer,
+        ContentType: mimeType
+      },
+      function(err, data) {
+        if (err) reject(err);
+        resolve(data);
+      }
+    );
+  });
+
+const resize = (buffer, mimeType, width, heigth) =>
+  new Promise((resolve, reject) => {
+    jimp
+      .read(buffer)
+      .then(image => image.resize(width, heigth).getBufferAsync(mimeType))
+      .then(resizedBuffer => resolve(resizedBuffer))
+      .catch(error => reject(error));
+  });
