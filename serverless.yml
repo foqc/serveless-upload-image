@@ -7,13 +7,6 @@ service: file-UploaderService-foqc-home
 # The `provider` block defines where your service will be deployed
 custom:
   bucket: lambda-test-foqc-file-home
-  apigwBinary:
-    types:
-      - 'image/jpeg'
-      - 'image/png'
-
-plugins:
- - serverless-apigw-binary
  
 # The `provider` block defines where your service will be deployed
 provider:
@@ -21,6 +14,9 @@ provider:
   runtime: nodejs12.x
   region: us-east-1
   stackName: fileUploaderHome
+  apiGateway:
+    binaryMediaTypes:
+      - '*/*'
   iamRoleStatements:
     - Effect: "Allow"
       Action:

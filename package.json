@@ -13,6 +13,7 @@
     "serverless-apigw-binary": "^0.4.4"
   },
   "dependencies": {
+    "busboy": "^0.3.1",
     "uuid": "^3.4.0"
   }
 }
