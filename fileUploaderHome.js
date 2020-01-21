@@ -66,8 +66,8 @@ module.exports.handler = async event => {
         thumbnailKey: thumbnailFile.key,
         bucket: originalFile.Bucket,
         fileName: file.filename,
-        originalPath: signedOriginalUrl,
-        thumbnailPath: signedThumbnailUrl,
+        originalUrl: signedOriginalUrl,
+        thumbnailUrl: signedThumbnailUrl,
         originalSize: file.content.byteLength
       })
     };
@@ -111,7 +111,7 @@ const resize = (buffer, mimeType, width, heigth) =>
   new Promise((resolve, reject) => {
     jimp
       .read(buffer)
-      .then(image => image.resize(width, heigth).getBufferAsync(mimeType))
+      .then(image => image.resize(width, heigth).quality(70).getBufferAsync(mimeType))
       .then(resizedBuffer => resolve(resizedBuffer))
       .catch(error => reject(error));
   });
