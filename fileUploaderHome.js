@@ -50,17 +50,20 @@ module.exports.handler = async event => {
 
     const signedOriginalUrl = s3.getSignedUrl("getObject", {
       Bucket: originalFile.Bucket,
-      Key: originalKey
+      Key: originalKey,
+      Expires: 60000,
     });
 
     const signedThumbnailUrl = s3.getSignedUrl("getObject", {
       Bucket: thumbnailFile.Bucket,
-      Key: thumbnailKey
+      Key: thumbnailKey,
+      Expires: 60000,
     });
 
     return {
       statusCode: 200,
       body: JSON.stringify({
+        id: uid,
         mimeType: file.contentType,
         originalKey: originalFile.key,
         thumbnailKey: thumbnailFile.key,
