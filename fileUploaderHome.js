@@ -30,34 +30,24 @@ module.exports.handler = async event => {
     const fileResizedBuffer = await resize(
       file.content,
       file.contentType,
-      460,
       460
     );
 
-    const originalFile = await uploadToS3(
-      bucket,
-      originalKey,
-      file.content,
-      file.contentType
-    );
-
-    const thumbnailFile = await uploadToS3(
-      bucket,
-      thumbnailKey,
-      fileResizedBuffer,
-      file.contentType
-    );
+    const [originalFile, thumbnailFile] = await Promise.all([
+      uploadToS3(bucket, originalKey, file.content, file.contentType),
+      uploadToS3(bucket, thumbnailKey, fileResizedBuffer, file.contentType)
+    ]);
 
     const signedOriginalUrl = s3.getSignedUrl("getObject", {
       Bucket: originalFile.Bucket,
       Key: originalKey,
-      Expires: 60000,
+      Expires: 60000
     });
 
     const signedThumbnailUrl = s3.getSignedUrl("getObject", {
       Bucket: thumbnailFile.Bucket,
       Key: thumbnailKey,
-      Expires: 60000,
+      Expires: 60000
     });
 
     return {
@@ -110,11 +100,11 @@ const uploadToS3 = (bucket, key, buffer, mimeType) =>
     );
   });
 
-const resize = (buffer, mimeType, width, heigth) =>
+const resize = (buffer, mimeType, width) =>
   new Promise((resolve, reject) => {
     jimp
       .read(buffer)
-      .then(image => image.resize(width, heigth).quality(70).getBufferAsync(mimeType))
+      .then(image => image.resize(width, Jimp.AUTO).quality(70).getBufferAsync(mimeType))
       .then(resizedBuffer => resolve(resizedBuffer))
       .catch(error => reject(error));
   });
