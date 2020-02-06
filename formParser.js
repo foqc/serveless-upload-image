@@ -1,11 +1,14 @@
 const Busboy = require("busboy");
 
-module.exports.parser = event =>
+module.exports.parser = (event, fileSize) =>
   new Promise((resolve, reject) => {
     const busboy = new Busboy({
       headers: {
         "content-type":
           event.headers["content-type"] || event.headers["Content-Type"]
+      },
+      limits: {
+        fileSize
       }
     });
     const result = {

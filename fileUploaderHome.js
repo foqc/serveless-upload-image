@@ -6,7 +6,7 @@ const s3 = new AWS.S3();
 const formParser = require("./formParser");
 
 const bucket = process.env.Bucket;
-const MAX_SIZE = 10000000;
+const MAX_SIZE = 4500000; // 4MB
 
 const PNG_MIME_TYPE = "image/png";
 const JPEG_MIME_TYPE = "image/jpeg";
@@ -16,7 +16,7 @@ const MIME_TYPES = [PNG_MIME_TYPE, JPEG_MIME_TYPE, JPG_MIME_TYPE];
 
 module.exports.handler = async event => {
   try {
-    const formData = await formParser.parser(event);
+    const formData = await formParser.parser(event, MAX_SIZE);
     const file = formData.files[0];
 
     if (!isAllowedFile(file.content.byteLength, file.contentType))
