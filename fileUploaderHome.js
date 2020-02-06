@@ -1,7 +1,7 @@
 "use strict";
 const AWS = require("aws-sdk");
 const uuid = require("uuid/v4");
-const jimp = require("jimp");
+const Jimp = require("jimp");
 const s3 = new AWS.S3();
 const formParser = require("./formParser");
 
@@ -102,7 +102,7 @@ const uploadToS3 = (bucket, key, buffer, mimeType) =>
 
 const resize = (buffer, mimeType, width) =>
   new Promise((resolve, reject) => {
-    jimp
+    Jimp
       .read(buffer)
       .then(image => image.resize(width, Jimp.AUTO).quality(70).getBufferAsync(mimeType))
       .then(resizedBuffer => resolve(resizedBuffer))
